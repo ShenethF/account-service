@@ -126,7 +126,7 @@ public class AccountService  {
         log.info("Balance Credited. New Balance: {}", account.getBalance());
     }
 
-    
+
 
     //Generate unique 12 digit account number
     private String generateAccountNumber(){
