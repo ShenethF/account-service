@@ -70,8 +70,63 @@ public class AccountService  {
         return account.getBalance();
     }
 
+    /**
+     * Block account - Fraud Detection Service via Kafka
+     * @return
+     */
+    public void blockAccount(String accountNumber){
+        log.info("Blocking account: {}", accountNumber);
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new RuntimeException("Account Not Found"));
 
+        account.setStatus(AccountStatus.BLOCKED);
+        accountRepository.save(account);
+        log.info("Account Blocked: {}", accountNumber);
+    }
 
+    /**
+     * Called by Transaction Service
+     * @param accountNumber
+     * @param amount
+     */
+    public void deductBalance(String accountNumber, BigDecimal amount){
+        log.info("Deducting balance {} from account: {}", amount, accountNumber);
+
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new RuntimeException("Account Not Found"));
+
+        if (account.getStatus() != AccountStatus.ACTIVE){
+            throw new RuntimeException("Account is not active"+accountNumber);
+        }
+        if (account.getBalance().compareTo(amount) < 0){
+            throw new RuntimeException("Insufficient funds for account"+accountNumber);
+        }
+
+        account.setBalance(account.getBalance().subtract(amount));
+        accountRepository.save(account);
+
+        log.info("Balance updated. New Balance: {}", account.getBalance());
+    }
+
+    /**
+     * Credit Balance
+     * Called by Transaction-Service via Kafka
+     * @param accountNumber
+     * @param amount
+     */
+    public void creditBalance(String accountNumber, BigDecimal amount){
+        log.info("Crediting {} to account: {}", amount, accountNumber);
+
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new RuntimeException("Account Not Found"));
+
+        account.setBalance(account.getBalance().add(amount));
+        accountRepository.save(account);
+
+        log.info("Balance Credited. New Balance: {}", account.getBalance());
+    }
+
+    
 
     //Generate unique 12 digit account number
     private String generateAccountNumber(){
